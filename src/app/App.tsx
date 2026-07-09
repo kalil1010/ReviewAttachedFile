@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  ChevronRight,
   Check,
   X,
   SkipForward,
@@ -24,12 +23,13 @@ import {
   Film,
   AlertCircle,
   Zap,
+  LayoutGrid,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type DriveStatus = "connected" | "disconnected" | "indexing";
-type Screen = "dashboard" | "search" | "people" | "reviews" | "settings";
+type Screen = "dashboard" | "search" | "scenes" | "people" | "reviews" | "settings";
 
 interface Drive {
   id: string;
@@ -154,6 +154,7 @@ function WindowChrome({ title }: { title: string }) {
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: HardDrive },
   { id: "search", label: "Smart Search", icon: Search },
+  { id: "scenes", label: "Scenes", icon: LayoutGrid },
   { id: "people", label: "People", icon: Users },
   { id: "reviews", label: "Reviews", icon: CheckSquare, badge: 35 },
   { id: "settings", label: "Settings", icon: Settings },
@@ -221,6 +222,10 @@ function Sidebar({ active, onNav }: { active: Screen; onNav: (s: Screen) => void
 // ─── Screen: Dashboard ────────────────────────────────────────────────────────
 
 function QRModal({ drive, onClose }: { drive: Drive; onClose: () => void }) {
+  const qrCells = useMemo(
+    () => Array.from({ length: 49 }).map(() => Math.random() > 0.5),
+    [drive.id]
+  );
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -235,11 +240,11 @@ function QRModal({ drive, onClose }: { drive: Drive; onClose: () => void }) {
         <p className="text-[13px] font-semibold text-white">{drive.name}</p>
         {/* Simple QR placeholder */}
         <div className="size-40 rounded-lg grid grid-cols-7 gap-0.5 p-2" style={{ background: "#fff" }}>
-          {Array.from({ length: 49 }).map((_, i) => (
+          {qrCells.map((on, i) => (
             <div
               key={i}
               className="rounded-[1px]"
-              style={{ background: Math.random() > 0.5 ? "#000" : "#fff", aspectRatio: "1" }}
+              style={{ background: on ? "#000" : "#fff", aspectRatio: "1" }}
             />
           ))}
         </div>
@@ -379,8 +384,8 @@ function DashboardScreen() {
 
 // ─── Screen: Smart Search ─────────────────────────────────────────────────────
 
-function SearchScreen() {
-  const [query, setQuery] = useState("");
+function SearchScreen({ prefill = "", onClear }: { prefill?: string; onClear?: () => void }) {
+  const [query, setQuery] = useState(prefill);
   const [mode, setMode] = useState<"text" | "image">("text");
   const [offline] = useState(false);
   const [hoveredResult, setHoveredResult] = useState<string | null>(null);
@@ -389,8 +394,9 @@ function SearchScreen() {
   const results = query.length > 0 ? SEARCH_RESULTS : [];
 
   useEffect(() => {
+    if (prefill) setQuery(prefill);
     inputRef.current?.focus();
-  }, []);
+  }, [prefill]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -581,7 +587,7 @@ function PeopleScreen() {
             return (
               <div
                 key={person.id}
-                className="rounded-xl p-4 flex flex-col items-center gap-2.5"
+                className="group rounded-xl p-4 flex flex-col items-center gap-2.5"
                 style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
               >
                 <div className="relative">
@@ -840,7 +846,7 @@ function SettingsScreen() {
   const [serverUrl, setServerUrl] = useState("http://localhost:8000");
   const [connStatus, setConnStatus] = useState<"idle" | "testing" | "ok" | "fail">("idle");
   const [autoConfirm, setAutoConfirm] = useState(85);
-  const [autoReject, setAutoReject] = useState(40);
+  const [autoReject, setAutoReject] = useState(65);
   const [density, setDensity] = useState<"low" | "medium" | "high">("medium");
 
   function testConnection() {
@@ -940,7 +946,7 @@ function SettingsScreen() {
               <div className="flex-none px-2 py-2 text-center" style={{ width: `${autoReject}%`, background: "rgba(255,69,58,0.2)", color: "#FF453A" }}>
                 Auto-Reject
               </div>
-              <div className="flex-1 px-2 py-2 text-center" style={{ background: "rgba(255,159,10,0.12)", color: "#FF9F0A" }}>
+              <div className="flex-none px-2 py-2 text-center" style={{ width: `${Math.max(0, autoConfirm - autoReject)}%`, background: "rgba(255,159,10,0.12)", color: "#FF9F0A" }}>
                 Manual Review
               </div>
               <div className="flex-none px-2 py-2 text-center" style={{ width: `${100 - autoConfirm}%`, background: "rgba(50,215,75,0.15)", color: "#32D74B" }}>
@@ -1028,14 +1034,148 @@ function SettingsScreen() {
   );
 }
 
+// ─── Screen: Scenes ───────────────────────────────────────────────────────────
+
+const SCENE_CATEGORIES = [
+  { label: "Outdoor",    count: 312, drives: ["d1", "d4"], image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=240&fit=crop&auto=format" },
+  { label: "Concert",   count: 87,  drives: ["d2"],        image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=240&fit=crop&auto=format" },
+  { label: "Wedding",   count: 54,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=240&fit=crop&auto=format" },
+  { label: "Sports",    count: 201, drives: ["d1", "d4"],  image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=240&fit=crop&auto=format" },
+  { label: "Night",     count: 143, drives: ["d4"],        image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=240&fit=crop&auto=format" },
+  { label: "People",    count: 489, drives: ["d1", "d2", "d4"], image: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=240&fit=crop&auto=format" },
+  { label: "Food",      count: 67,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=240&fit=crop&auto=format" },
+  { label: "Travel",    count: 178, drives: ["d2", "d4"],  image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&h=240&fit=crop&auto=format" },
+  { label: "Graduation",count: 23,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=240&fit=crop&auto=format" },
+  { label: "Birthday",  count: 41,  drives: ["d4"],        image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=240&fit=crop&auto=format" },
+  { label: "Landscape", count: 95,  drives: ["d1", "d4"],  image: "https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=400&h=240&fit=crop&auto=format" },
+  { label: "Unknown",   count: 38,  drives: ["d2"],        image: "" },
+];
+
+const DRIVE_COLORS: Record<string, string> = {
+  d1: "#0A84FF",
+  d2: "#32D74B",
+  d3: "#FF9F0A",
+  d4: "#BF5AF2",
+  d5: "#FF453A",
+};
+
+const DRIVE_NAMES: Record<string, string> = {
+  d1: "WD_BLACK 4TB",
+  d2: "Seagate Backup",
+  d3: "Samsung T7 Shield",
+  d4: "LaCie Rugged SSD",
+  d5: "G-DRIVE ArmorATD",
+};
+
+function ScenesScreen({ onNavigateSearch }: { onNavigateSearch: (query: string) => void }) {
+  const [hoveredDrive, setHoveredDrive] = useState<{ driveId: string; x: number; y: number } | null>(null);
+  const totalScenes = SCENE_CATEGORIES.reduce((acc, s) => acc + s.count, 0);
+  const drivesWithScenes = new Set(SCENE_CATEGORIES.flatMap(s => s.drives)).size;
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-3 shrink-0" style={{ borderBottom: "1px solid #38383A" }}>
+        <h1 className="text-[16px] font-semibold text-white">Scenes</h1>
+        <p className="text-[12px] mt-0.5" style={{ color: "rgba(235,235,245,0.5)" }}>
+          {totalScenes.toLocaleString()} scenes across {drivesWithScenes} drives
+        </p>
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+          {SCENE_CATEGORIES.map(scene => (
+            <button
+              key={scene.label}
+              onClick={() => onNavigateSearch(scene.label)}
+              className="group rounded-xl overflow-hidden text-left transition-all"
+              style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "#0A84FF")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "#38383A")}
+            >
+              {/* Cover image */}
+              <div className="overflow-hidden" style={{ height: 120, background: "#3A3A3C" }}>
+                {scene.image ? (
+                  <img
+                    src={scene.image}
+                    alt={scene.label}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: "#3A3A3C" }}>
+                    <LayoutGrid size={28} style={{ color: "rgba(235,235,245,0.2)" }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Card body */}
+              <div className="p-3">
+                <p className="text-[13px] font-semibold text-white">{scene.label}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: "rgba(235,235,245,0.45)" }}>
+                  {scene.count} scenes
+                </p>
+
+                {/* Drive dots */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  {scene.drives.map(driveId => (
+                    <div
+                      key={driveId}
+                      className="relative"
+                      onMouseEnter={e => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredDrive({ driveId, x: rect.left, y: rect.top });
+                      }}
+                      onMouseLeave={() => setHoveredDrive(null)}
+                    >
+                      <div
+                        className="size-2 rounded-full"
+                        style={{ background: DRIVE_COLORS[driveId] ?? "#555" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Drive name tooltip */}
+      {hoveredDrive && (
+        <div
+          className="fixed z-50 px-2 py-1 rounded-md text-[11px] font-medium pointer-events-none"
+          style={{
+            background: "#3A3A3C",
+            color: "#fff",
+            border: "1px solid #38383A",
+            top: hoveredDrive.y - 28,
+            left: hoveredDrive.x,
+            transform: "translateX(-50%)",
+          }}
+        >
+          {DRIVE_NAMES[hoveredDrive.driveId]}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("dashboard");
+  const [searchPrefill, setSearchPrefill] = useState("");
+
+  function navigateToSearch(query: string) {
+    setSearchPrefill(query);
+    setScreen("search");
+  }
 
   const screenTitles: Record<Screen, string> = {
     dashboard: "FrameFinder — Drive Manager",
     search: "FrameFinder — Smart Search",
+    scenes: "FrameFinder — Scenes",
     people: "FrameFinder — People",
     reviews: "FrameFinder — Pending Reviews",
     settings: "FrameFinder — Settings",
@@ -1043,7 +1183,8 @@ export default function App() {
 
   const screens: Record<Screen, JSX.Element> = {
     dashboard: <DashboardScreen />,
-    search: <SearchScreen />,
+    search: <SearchScreen prefill={searchPrefill} onClear={() => setSearchPrefill("")} />,
+    scenes: <ScenesScreen onNavigateSearch={navigateToSearch} />,
     people: <PeopleScreen />,
     reviews: <ReviewsScreen />,
     settings: <SettingsScreen />,
