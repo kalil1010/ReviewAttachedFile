@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   HardDrive,
   Search,
@@ -24,6 +24,10 @@ import {
   AlertCircle,
   Zap,
   LayoutGrid,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -345,6 +349,7 @@ function DriveCard({ drive, onQR }: { drive: Drive; onQR: (d: Drive) => void }) 
 function DashboardScreen() {
   const [drives] = useState<Drive[]>(INITIAL_DRIVES);
   const [qrDrive, setQrDrive] = useState<Drive | null>(null);
+  const [showAddDrive, setShowAddDrive] = useState(false);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -360,6 +365,7 @@ function DashboardScreen() {
           </p>
         </div>
         <button
+          onClick={() => setShowAddDrive(true)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-opacity hover:opacity-80"
           style={{ background: "#0A84FF", color: "#fff" }}
         >
@@ -378,6 +384,7 @@ function DashboardScreen() {
       </div>
 
       {qrDrive && <QRModal drive={qrDrive} onClose={() => setQrDrive(null)} />}
+      {showAddDrive && <AddDriveModal onClose={() => setShowAddDrive(false)} />}
     </div>
   );
 }
@@ -1036,21 +1043,6 @@ function SettingsScreen() {
 
 // ─── Screen: Scenes ───────────────────────────────────────────────────────────
 
-const SCENE_CATEGORIES = [
-  { label: "Outdoor",    count: 312, drives: ["d1", "d4"], image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=240&fit=crop&auto=format" },
-  { label: "Concert",   count: 87,  drives: ["d2"],        image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=240&fit=crop&auto=format" },
-  { label: "Wedding",   count: 54,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=240&fit=crop&auto=format" },
-  { label: "Sports",    count: 201, drives: ["d1", "d4"],  image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=240&fit=crop&auto=format" },
-  { label: "Night",     count: 143, drives: ["d4"],        image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=240&fit=crop&auto=format" },
-  { label: "People",    count: 489, drives: ["d1", "d2", "d4"], image: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=240&fit=crop&auto=format" },
-  { label: "Food",      count: 67,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=240&fit=crop&auto=format" },
-  { label: "Travel",    count: 178, drives: ["d2", "d4"],  image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&h=240&fit=crop&auto=format" },
-  { label: "Graduation",count: 23,  drives: ["d1"],        image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=240&fit=crop&auto=format" },
-  { label: "Birthday",  count: 41,  drives: ["d4"],        image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=240&fit=crop&auto=format" },
-  { label: "Landscape", count: 95,  drives: ["d1", "d4"],  image: "https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=400&h=240&fit=crop&auto=format" },
-  { label: "Unknown",   count: 38,  drives: ["d2"],        image: "" },
-];
-
 const DRIVE_COLORS: Record<string, string> = {
   d1: "#0A84FF",
   d2: "#32D74B",
@@ -1067,10 +1059,93 @@ const DRIVE_NAMES: Record<string, string> = {
   d5: "G-DRIVE ArmorATD",
 };
 
+const SCENE_CATEGORIES = [
+  { label: "Outdoor",    count: 312, drives: ["d1","d4"],       lighting: "natural",     time: "day",          shooting: "wide",     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=240&fit=crop&auto=format" },
+  { label: "Concert",    count: 87,  drives: ["d2"],             lighting: "low-light",   time: "night",        shooting: "wide",     image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=240&fit=crop&auto=format" },
+  { label: "Wedding",    count: 54,  drives: ["d1"],             lighting: "natural",     time: "golden-hour",  shooting: "close-up", image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=240&fit=crop&auto=format" },
+  { label: "Sports",     count: 201, drives: ["d1","d4"],       lighting: "natural",     time: "day",          shooting: "wide",     image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=240&fit=crop&auto=format" },
+  { label: "Night",      count: 143, drives: ["d4"],             lighting: "low-light",   time: "night",        shooting: "outdoor",  image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=240&fit=crop&auto=format" },
+  { label: "People",     count: 489, drives: ["d1","d2","d4"],  lighting: "natural",     time: "day",          shooting: "close-up", image: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=240&fit=crop&auto=format" },
+  { label: "Food",       count: 67,  drives: ["d1"],             lighting: "studio",      time: "day",          shooting: "close-up", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=240&fit=crop&auto=format" },
+  { label: "Travel",     count: 178, drives: ["d2","d4"],       lighting: "natural",     time: "golden-hour",  shooting: "wide",     image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&h=240&fit=crop&auto=format" },
+  { label: "Graduation", count: 23,  drives: ["d1"],             lighting: "natural",     time: "day",          shooting: "wide",     image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=240&fit=crop&auto=format" },
+  { label: "Birthday",   count: 41,  drives: ["d4"],             lighting: "studio",      time: "day",          shooting: "indoor",   image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=240&fit=crop&auto=format" },
+  { label: "Landscape",  count: 95,  drives: ["d1","d4"],       lighting: "golden-hour", time: "golden-hour",  shooting: "aerial",   image: "https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=400&h=240&fit=crop&auto=format" },
+  { label: "Unknown",    count: 38,  drives: ["d2"],             lighting: "low-light",   time: "night",        shooting: "wide",     image: "" },
+];
+
+const LIGHTING_CHIPS = [
+  { value: "", label: "All" },
+  { value: "natural",     label: "☀️ Natural" },
+  { value: "golden-hour", label: "🌅 Golden Hour" },
+  { value: "overcast",    label: "☁️ Overcast" },
+  { value: "studio",      label: "👎 Studio" },
+  { value: "low-light",   label: "🌑 Low Light" },
+  { value: "backlit",     label: "⬛ Backlit" },
+];
+
+const TIME_CHIPS = [
+  { value: "",            label: "All" },
+  { value: "day",         label: "☀️ Day" },
+  { value: "golden-hour", label: "🌅 Golden Hour" },
+  { value: "blue-hour",   label: "🌆 Blue Hour" },
+  { value: "night",       label: "🌙 Night" },
+];
+
+const SHOOTING_CHIPS = [
+  { value: "",         label: "All" },
+  { value: "wide",     label: "🌍 Wide" },
+  { value: "close-up", label: "🔍 Close-Up" },
+  { value: "aerial",   label: "🚁 Aerial" },
+  { value: "indoor",   label: "🏠 Indoor" },
+  { value: "outdoor",  label: "🌳 Outdoor" },
+  { value: "slow-mo",  label: "🎬 Slow-Mo" },
+];
+
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="whitespace-nowrap rounded-full text-[12px] transition-all"
+      style={{
+        padding: "4px 12px",
+        background: active ? "rgba(10,132,255,0.15)" : "rgba(235,235,245,0.06)",
+        border: `1px solid ${active ? "#0A84FF" : "#38383A"}`,
+        color: active ? "#0A84FF" : "rgba(235,235,245,0.6)",
+        fontWeight: active ? 600 : 400,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function ScenesScreen({ onNavigateSearch }: { onNavigateSearch: (query: string) => void }) {
+  const [lighting, setLighting] = useState("");
+  const [time, setTime] = useState("");
+  const [shooting, setShooting] = useState("");
   const [hoveredDrive, setHoveredDrive] = useState<{ driveId: string; x: number; y: number } | null>(null);
+
+  const hasFilters = lighting !== "" || time !== "" || shooting !== "";
+
+  const filtered = useMemo(() =>
+    SCENE_CATEGORIES.filter(s =>
+      (lighting === "" || s.lighting === lighting) &&
+      (time === "" || s.time === time) &&
+      (shooting === "" || s.shooting === shooting)
+    ),
+    [lighting, time, shooting]
+  );
+
   const totalScenes = SCENE_CATEGORIES.reduce((acc, s) => acc + s.count, 0);
+  const filteredTotal = filtered.reduce((acc, s) => acc + s.count, 0);
   const drivesWithScenes = new Set(SCENE_CATEGORIES.flatMap(s => s.drives)).size;
+
+  function clearFilters() {
+    setLighting("");
+    setTime("");
+    setShooting("");
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1078,67 +1153,139 @@ function ScenesScreen({ onNavigateSearch }: { onNavigateSearch: (query: string) 
       <div className="px-6 py-3 shrink-0" style={{ borderBottom: "1px solid #38383A" }}>
         <h1 className="text-[16px] font-semibold text-white">Scenes</h1>
         <p className="text-[12px] mt-0.5" style={{ color: "rgba(235,235,245,0.5)" }}>
-          {totalScenes.toLocaleString()} scenes across {drivesWithScenes} drives
+          {hasFilters
+            ? `${filteredTotal.toLocaleString()} matching scenes`
+            : `${totalScenes.toLocaleString()} scenes across ${drivesWithScenes} drives`}
         </p>
+      </div>
+
+      {/* Filter bar */}
+      <div
+        className="shrink-0 flex items-start gap-6 px-6 py-2.5 overflow-x-auto"
+        style={{ background: "#2C2C2E", borderBottom: "1px solid #38383A" }}
+      >
+        {/* Lighting */}
+        <div className="shrink-0">
+          <p className="text-[11px] mb-1.5" style={{ color: "rgba(235,235,245,0.4)" }}>Lighting</p>
+          <div className="flex gap-1.5">
+            {LIGHTING_CHIPS.map(c => (
+              <FilterChip key={c.value} label={c.label} active={lighting === c.value} onClick={() => setLighting(c.value)} />
+            ))}
+          </div>
+        </div>
+
+        <div className="w-px self-stretch" style={{ background: "#38383A" }} />
+
+        {/* Time of Day */}
+        <div className="shrink-0">
+          <p className="text-[11px] mb-1.5" style={{ color: "rgba(235,235,245,0.4)" }}>Time of Day</p>
+          <div className="flex gap-1.5">
+            {TIME_CHIPS.map(c => (
+              <FilterChip key={c.value} label={c.label} active={time === c.value} onClick={() => setTime(c.value)} />
+            ))}
+          </div>
+        </div>
+
+        <div className="w-px self-stretch" style={{ background: "#38383A" }} />
+
+        {/* Shooting Type */}
+        <div className="shrink-0">
+          <p className="text-[11px] mb-1.5" style={{ color: "rgba(235,235,245,0.4)" }}>Shooting Type</p>
+          <div className="flex gap-1.5">
+            {SHOOTING_CHIPS.map(c => (
+              <FilterChip key={c.value} label={c.label} active={shooting === c.value} onClick={() => setShooting(c.value)} />
+            ))}
+          </div>
+        </div>
+
+        {/* Clear filters */}
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="ml-auto self-center text-[12px] transition-colors hover:text-[#0A84FF] whitespace-nowrap shrink-0"
+            style={{ color: "rgba(235,235,245,0.4)" }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
-          {SCENE_CATEGORIES.map(scene => (
-            <button
-              key={scene.label}
-              onClick={() => onNavigateSearch(scene.label)}
-              className="group rounded-xl overflow-hidden text-left transition-all"
-              style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "#0A84FF")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "#38383A")}
-            >
-              {/* Cover image */}
-              <div className="overflow-hidden" style={{ height: 120, background: "#3A3A3C" }}>
-                {scene.image ? (
-                  <img
-                    src={scene.image}
-                    alt={scene.label}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ background: "#3A3A3C" }}>
-                    <LayoutGrid size={28} style={{ color: "rgba(235,235,245,0.2)" }} />
-                  </div>
-                )}
-              </div>
-
-              {/* Card body */}
-              <div className="p-3">
-                <p className="text-[13px] font-semibold text-white">{scene.label}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: "rgba(235,235,245,0.45)" }}>
-                  {scene.count} scenes
-                </p>
-
-                {/* Drive dots */}
-                <div className="flex items-center gap-1.5 mt-2">
-                  {scene.drives.map(driveId => (
-                    <div
-                      key={driveId}
-                      className="relative"
-                      onMouseEnter={e => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setHoveredDrive({ driveId, x: rect.left, y: rect.top });
-                      }}
-                      onMouseLeave={() => setHoveredDrive(null)}
-                    >
-                      <div
-                        className="size-2 rounded-full"
-                        style={{ background: DRIVE_COLORS[driveId] ?? "#555" }}
-                      />
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <LayoutGrid size={32} style={{ color: "rgba(235,235,245,0.2)" }} />
+            <p className="text-[14px] font-medium" style={{ color: "rgba(235,235,245,0.4)" }}>No scenes match these filters</p>
+            <button onClick={clearFilters} className="text-[12px]" style={{ color: "#0A84FF" }}>Clear filters</button>
+          </div>
+        ) : (
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+            {filtered.map(scene => (
+              <button
+                key={scene.label}
+                onClick={() => onNavigateSearch(scene.label)}
+                className="group rounded-xl overflow-hidden text-left transition-all"
+                style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "#0A84FF")}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = "#38383A")}
+              >
+                {/* Cover image */}
+                <div className="overflow-hidden" style={{ height: 120, background: "#3A3A3C" }}>
+                  {scene.image ? (
+                    <img
+                      src={scene.image}
+                      alt={scene.label}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <LayoutGrid size={28} style={{ color: "rgba(235,235,245,0.2)" }} />
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
+
+                {/* Card body */}
+                <div className="p-3">
+                  <p className="text-[13px] font-semibold text-white">{scene.label}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "rgba(235,235,245,0.45)" }}>
+                    {scene.count} scenes
+                  </p>
+
+                  {/* Drive dots */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {scene.drives.map(driveId => (
+                      <div
+                        key={driveId}
+                        className="relative"
+                        onMouseEnter={e => {
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoveredDrive({ driveId, x: rect.left + rect.width / 2, y: rect.top });
+                        }}
+                        onMouseLeave={() => setHoveredDrive(null)}
+                      >
+                        <div className="size-2 rounded-full" style={{ background: DRIVE_COLORS[driveId] ?? "#555" }} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Visual metadata chips */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {[scene.lighting, scene.time, scene.shooting].map(tag => (
+                      <span
+                        key={tag}
+                        className="text-[10px] rounded capitalize"
+                        style={{ padding: "2px 6px", background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.5)" }}
+                      >
+                        {tag.replace("-", " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Drive name tooltip */}
@@ -1161,11 +1308,334 @@ function ScenesScreen({ onNavigateSearch }: { onNavigateSearch: (query: string) 
   );
 }
 
+// ─── Login Screen ────────────────────────────────────────────────────────────
+
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setTimeout(() => {
+      if (email === "admin@framefinder.app" && password === "password") {
+        onLogin();
+      } else {
+        setStatus("error");
+      }
+    }, 1400);
+  }
+
+  return (
+    <div className="size-full flex flex-col overflow-hidden" style={{ background: "#1C1C1E" }}>
+      {/* macOS chrome */}
+      <div
+        className="flex items-center h-11 px-4 shrink-0"
+        style={{ borderBottom: "1px solid #38383A" }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="size-3 rounded-full" style={{ background: "#FF5F57" }} />
+          <div className="size-3 rounded-full" style={{ background: "#FFBD2E" }} />
+          <div className="size-3 rounded-full" style={{ background: "#28C840" }} />
+        </div>
+      </div>
+
+      {/* Centered card */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full flex flex-col gap-5"
+          style={{ maxWidth: 400, background: "#2C2C2E", border: "1px solid #38383A", borderRadius: 16, padding: 32 }}
+        >
+          {/* Branding */}
+          <div className="flex flex-col items-center gap-3 mb-1">
+            <div className="size-12 rounded-2xl flex items-center justify-center" style={{ background: "#0A84FF" }}>
+              <Film size={22} className="text-white" />
+            </div>
+            <h1 className="text-[18px] font-semibold text-white">Sign in to FrameFinder</h1>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="text-[12px] block mb-1.5 font-medium" style={{ color: "rgba(235,235,245,0.6)" }}>
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setStatus("idle"); }}
+              placeholder="you@example.com"
+              className="w-full px-3 py-2.5 rounded-lg text-[13px] text-white outline-none transition-all"
+              style={{ background: "#1C1C1E", border: `1px solid ${status === "error" ? "#FF453A" : "#38383A"}` }}
+              autoFocus
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="text-[12px] block mb-1.5 font-medium" style={{ color: "rgba(235,235,245,0.6)" }}>
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={e => { setPassword(e.target.value); setStatus("idle"); }}
+                placeholder="••••••••"
+                className="w-full px-3 py-2.5 pr-10 rounded-lg text-[13px] text-white outline-none transition-all"
+                style={{ background: "#1C1C1E", border: `1px solid ${status === "error" ? "#FF453A" : "#38383A"}` }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "rgba(235,235,245,0.4)" }}
+              >
+                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white transition-opacity"
+            style={{ background: "#0A84FF", opacity: status === "loading" ? 0.7 : 1 }}
+          >
+            {status === "loading" ? "Signing in…" : "Sign In"}
+          </button>
+
+          {/* Error */}
+          {status === "error" && (
+            <p className="text-[12px] text-center -mt-2" style={{ color: "#FF453A" }}>
+              Invalid email or password
+            </p>
+          )}
+
+          {/* Footer */}
+          <p className="text-[11px] text-center" style={{ color: "rgba(235,235,245,0.3)" }}>
+            {"Don't have an account? Contact your administrator."}
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add New Drive Modal ──────────────────────────────────────────────────────
+
+const DETECTED_DRIVES = [
+  { id: "ext1", name: "WD Elements",    type: "USB",         size: "2.0 TB", path: "/Volumes/WD Elements" },
+  { id: "ext2", name: "SanDisk Extreme",type: "USB",         size: "1.0 TB", path: "/Volumes/SanDisk" },
+  { id: "ext3", name: "OWC Envoy Pro",  type: "Thunderbolt", size: "4.0 TB", path: "/Volumes/OWC_Envoy" },
+];
+
+function AddDriveModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [driveName, setDriveName] = useState("");
+
+  const selectedDrive = DETECTED_DRIVES.find(d => d.id === selected);
+
+  function handleNext() {
+    if (selectedDrive) {
+      setDriveName(selectedDrive.name);
+      setStep(2);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="flex flex-col"
+        style={{ width: 480, background: "#2C2C2E", border: "1px solid #38383A", borderRadius: 16 }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: "1px solid #38383A" }}>
+          <div>
+            {/* Step dots */}
+            <div className="flex items-center gap-1.5 mb-2">
+              {[1, 2].map(s => (
+                <div
+                  key={s}
+                  className="size-1.5 rounded-full transition-colors"
+                  style={{ background: step >= s ? "#0A84FF" : "#3A3A3C" }}
+                />
+              ))}
+              <span className="text-[11px] ml-1" style={{ color: "rgba(235,235,245,0.4)" }}>
+                Step {step} of 2
+              </span>
+            </div>
+            <h2 className="text-[15px] font-semibold text-white">
+              {step === 1 ? "Select a Drive to Register" : "Name this Drive"}
+            </h2>
+          </div>
+          <button onClick={onClose} style={{ color: "rgba(235,235,245,0.4)" }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-4 flex-1">
+          {step === 1 ? (
+            <div className="space-y-2">
+              {DETECTED_DRIVES.map(drive => (
+                <label
+                  key={drive.id}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: selected === drive.id ? "rgba(10,132,255,0.1)" : "rgba(235,235,245,0.03)",
+                    border: `1px solid ${selected === drive.id ? "#0A84FF" : "#38383A"}`,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="drive"
+                    value={drive.id}
+                    checked={selected === drive.id}
+                    onChange={() => setSelected(drive.id)}
+                    className="sr-only"
+                  />
+                  <div
+                    className="size-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(235,235,245,0.06)" }}
+                  >
+                    <HardDrive size={16} style={{ color: selected === drive.id ? "#0A84FF" : "rgba(235,235,245,0.4)" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-medium text-white">{drive.name}</span>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{ background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.5)" }}
+                      >
+                        {drive.type}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono" style={{ color: "rgba(235,235,245,0.4)" }}>
+                      {drive.path}
+                    </span>
+                  </div>
+                  <span className="text-[12px] font-medium shrink-0" style={{ color: "rgba(235,235,245,0.5)" }}>
+                    {drive.size}
+                  </span>
+                  <div
+                    className="size-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                    style={{ borderColor: selected === drive.id ? "#0A84FF" : "#38383A" }}
+                  >
+                    {selected === drive.id && (
+                      <div className="size-2 rounded-full" style={{ background: "#0A84FF" }} />
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11px] block mb-1.5" style={{ color: "rgba(235,235,245,0.5)" }}>
+                  Drive Name
+                </label>
+                <input
+                  value={driveName}
+                  onChange={e => setDriveName(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-[13px] text-white outline-none"
+                  style={{ background: "#1C1C1E", border: "1px solid #38383A" }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-[11px] block mb-1.5" style={{ color: "rgba(235,235,245,0.5)" }}>
+                  Mount Path
+                </label>
+                <div
+                  className="px-3 py-2.5 rounded-lg text-[12px] font-mono"
+                  style={{ background: "#1C1C1E", border: "1px solid #38383A", color: "rgba(235,235,245,0.5)" }}
+                >
+                  {selectedDrive?.path}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] block mb-1.5" style={{ color: "rgba(235,235,245,0.5)" }}>
+                  Capacity
+                </label>
+                <div
+                  className="px-3 py-2.5 rounded-lg text-[12px]"
+                  style={{ background: "#1C1C1E", border: "1px solid #38383A", color: "rgba(235,235,245,0.5)" }}
+                >
+                  {selectedDrive?.size}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderTop: "1px solid #38383A" }}
+        >
+          {step === 1 ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg text-[13px] font-medium transition-opacity hover:opacity-70"
+                style={{ color: "rgba(235,235,245,0.6)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!selected}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-opacity"
+                style={{
+                  background: selected ? "#0A84FF" : "#3A3A3C",
+                  color: selected ? "#fff" : "rgba(235,235,245,0.3)",
+                }}
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-opacity hover:opacity-70"
+                style={{ color: "rgba(235,235,245,0.6)" }}
+              >
+                <ChevronLeft size={14} /> Back
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white transition-opacity hover:opacity-80"
+                style={{ background: "#0A84FF" }}
+              >
+                Register & Start Indexing
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [authed, setAuthed] = useState(false);
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [searchPrefill, setSearchPrefill] = useState("");
+
+  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
   function navigateToSearch(query: string) {
     setSearchPrefill(query);
