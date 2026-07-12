@@ -28,6 +28,19 @@ import {
   EyeOff,
   ChevronRight,
   ChevronLeft,
+  ArrowLeft,
+  Pause,
+  Play,
+  Square,
+  Download,
+  Folder,
+  Trash2,
+  Image,
+  Calendar,
+  List,
+  Grid,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -267,15 +280,16 @@ function QRModal({ drive, onClose }: { drive: Drive; onClose: () => void }) {
   );
 }
 
-function DriveCard({ drive, onQR }: { drive: Drive; onQR: (d: Drive) => void }) {
+function DriveCard({ drive, onQR, onSelect }: { drive: Drive; onQR: (d: Drive) => void; onSelect: (d: Drive) => void }) {
   const isConnected = drive.status === "connected";
   return (
     <div
-      className="rounded-xl p-4 flex flex-col gap-3 transition-all"
+      className="rounded-xl p-4 flex flex-col gap-3 transition-all cursor-pointer"
       style={{
         background: "#2C2C2E",
         border: isConnected ? "1.5px solid #0A84FF" : "1px solid #38383A",
       }}
+      onClick={() => onSelect(drive)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -323,7 +337,7 @@ function DriveCard({ drive, onQR }: { drive: Drive; onQR: (d: Drive) => void }) 
 
       <div className="flex items-center gap-2 pt-1" style={{ borderTop: "1px solid #38383A" }}>
         <button
-          onClick={() => onQR(drive)}
+          onClick={e => { e.stopPropagation(); onQR(drive); }}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors hover:opacity-80"
           style={{ background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.7)" }}
         >
@@ -331,6 +345,7 @@ function DriveCard({ drive, onQR }: { drive: Drive; onQR: (d: Drive) => void }) 
           QR Code
         </button>
         <button
+          onClick={e => e.stopPropagation()}
           className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors hover:opacity-80"
           style={{
             background: drive.status === "disconnected" ? "rgba(235,235,245,0.06)" : "rgba(10,132,255,0.15)",
@@ -346,7 +361,7 @@ function DriveCard({ drive, onQR }: { drive: Drive; onQR: (d: Drive) => void }) 
   );
 }
 
-function DashboardScreen() {
+function DashboardScreen({ onSelectDrive }: { onSelectDrive: (d: Drive) => void }) {
   const [drives] = useState<Drive[]>(INITIAL_DRIVES);
   const [qrDrive, setQrDrive] = useState<Drive | null>(null);
   const [showAddDrive, setShowAddDrive] = useState(false);
@@ -378,7 +393,7 @@ function DashboardScreen() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
           {drives.map(drive => (
-            <DriveCard key={drive.id} drive={drive} onQR={setQrDrive} />
+            <DriveCard key={drive.id} drive={drive} onQR={setQrDrive} onSelect={onSelectDrive} />
           ))}
         </div>
       </div>
@@ -1308,6 +1323,510 @@ function ScenesScreen({ onNavigateSearch }: { onNavigateSearch: (query: string) 
   );
 }
 
+// ─── Screen: Drive Details ────────────────────────────────────────────────────
+
+interface VideoFile {
+  id: string;
+  filename: string;
+  duration: string;
+  keyframes: number;
+  sizeMB: number;
+  format: string;
+  thumbnail: string;
+  lighting: string;
+  timeOfDay: string;
+  shooting: string;
+}
+
+const DRIVE_VIDEOS: VideoFile[] = [
+  { id: "v1", filename: "wedding_ceremony_final.mp4",   duration: "01:12:34", keyframes: 432, sizeMB: 1240, format: "MP4 (H.264)", thumbnail: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=320&h=180&fit=crop&auto=format", lighting: "Natural",   timeOfDay: "Golden Hour", shooting: "Handheld" },
+  { id: "v2", filename: "concert_night_raw.mp4",        duration: "02:05:08", keyframes: 754, sizeMB: 3200, format: "MP4 (H.265)", thumbnail: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=320&h=180&fit=crop&auto=format", lighting: "Low Light", timeOfDay: "Night",       shooting: "Handheld" },
+  { id: "v3", filename: "family_reunion_2024.mp4",      duration: "00:47:20", keyframes: 284, sizeMB:  870, format: "MP4 (H.264)", thumbnail: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=320&h=180&fit=crop&auto=format", lighting: "Natural",   timeOfDay: "Daytime",     shooting: "Tripod"   },
+  { id: "v4", filename: "birthday_party_edit.mp4",      duration: "00:28:44", keyframes: 172, sizeMB:  560, format: "MOV (ProRes)", thumbnail: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=320&h=180&fit=crop&auto=format", lighting: "Studio",    timeOfDay: "Daytime",     shooting: "Handheld" },
+  { id: "v5", filename: "graduation_ceremony.mp4",      duration: "01:33:59", keyframes: 561, sizeMB: 2100, format: "MP4 (H.264)", thumbnail: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=320&h=180&fit=crop&auto=format", lighting: "Natural",   timeOfDay: "Daytime",     shooting: "Tripod"   },
+  { id: "v6", filename: "street_documentary.mp4",       duration: "00:54:12", keyframes: 325, sizeMB: 1800, format: "MP4 (H.265)", thumbnail: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=320&h=180&fit=crop&auto=format", lighting: "Low Light", timeOfDay: "Night",       shooting: "Handheld" },
+  { id: "v7", filename: "landscape_drone_4k.mp4",       duration: "00:22:05", keyframes: 132, sizeMB:  980, format: "MP4 (H.265)", thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=320&h=180&fit=crop&auto=format", lighting: "Natural",   timeOfDay: "Golden Hour", shooting: "Drone"    },
+  { id: "v8", filename: "interview_behind_scenes.mp4",  duration: "00:18:33", keyframes:  111, sizeMB:  420, format: "MOV (ProRes)", thumbnail: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=320&h=180&fit=crop&auto=format", lighting: "Studio",    timeOfDay: "Daytime",     shooting: "Tripod"   },
+];
+
+const KEYFRAME_TIMESTAMPS = ["00:05","00:10","00:15","00:20","00:25","00:30","00:40","00:50","01:00","01:15","01:30","01:45","02:00","02:20","02:40","03:00"];
+const KF_IMAGES = [
+  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=320&h=180&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=320&h=180&fit=crop&auto=format",
+];
+
+const AI_LIGHTING   = [{ label: "Outdoor",   pct: 62, frames: 9815 }, { label: "Indoor",    pct: 25, frames: 3958 }, { label: "Studio",    pct: 8,  frames: 1266 }, { label: "Low Light", pct: 5,  frames: 791  }];
+const AI_TIME       = [{ label: "Daytime",   pct: 55 }, { label: "Golden Hour", pct: 20 }, { label: "Night",       pct: 15 }, { label: "Sunset",      pct: 10 }];
+const AI_SHOOTING   = [{ label: "Handheld",  pct: 45 }, { label: "Tripod",      pct: 30 }, { label: "Drone",       pct: 15 }, { label: "Gimbal",      pct: 10 }];
+const SCENE_TAGS    = [{ label: "Beach", n: 1245 }, { label: "City", n: 832 }, { label: "Desert", n: 341 }, { label: "Studio", n: 298 }, { label: "Forest", n: 512 }, { label: "Indoor", n: 1033 }, { label: "Night", n: 643 }, { label: "Wedding", n: 189 }, { label: "Interview", n: 274 }];
+const DRIVE_PEOPLE  = [
+  { name: "Sarah Johnson", frames: 245, videos: 12, faceUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&auto=format", confidence: 97 },
+  { name: null,            frames: 89,  videos: 5,  faceUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&auto=format", confidence: 71 },
+  { name: "Marcus Webb",   frames: 156, videos: 8,  faceUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&auto=format", confidence: 94 },
+  { name: "Elena Vasquez", frames: 98,  videos: 4,  faceUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&auto=format", confidence: 89 },
+];
+
+type IndexingState = "in-progress" | "paused" | "completed" | "not-indexed" | "failed";
+
+function driveIndexingState(driveId: string): IndexingState {
+  if (driveId === "d2") return "in-progress";
+  if (driveId === "d3") return "not-indexed";
+  if (driveId === "d5") return "paused";
+  return "completed";
+}
+
+function CollapsibleSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between py-3 text-left"
+        style={{ borderBottom: `1px solid ${open ? "transparent" : "#38383A"}` }}
+      >
+        <h2 className="text-[14px] font-semibold text-white">{title}</h2>
+        {open ? <ChevronUp size={14} style={{ color: "rgba(235,235,245,0.4)" }} /> : <ChevronDown size={14} style={{ color: "rgba(235,235,245,0.4)" }} />}
+      </button>
+      {open && <div className="pb-4">{children}</div>}
+    </section>
+  );
+}
+
+function AIBar({ label, pct, frames }: { label: string; pct: number; frames?: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[12px] w-24 shrink-0" style={{ color: "rgba(235,235,245,0.6)" }}>{label}</span>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#3A3A3C" }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#0A84FF" }} />
+      </div>
+      <span className="text-[12px] w-8 text-right font-semibold" style={{ color: "rgba(235,235,245,0.7)" }}>{pct}%</span>
+      {frames !== undefined && (
+        <span className="text-[11px] w-20 text-right" style={{ color: "rgba(235,235,245,0.35)" }}>
+          {frames.toLocaleString()} fr
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DriveDetailsScreen({ drive, onBack }: { drive: Drive; onBack: () => void }) {
+  const [indexingState, setIndexingState] = useState<IndexingState>(driveIndexingState(drive.id));
+  const [videoSearch, setVideoSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedVideo, setSelectedVideo] = useState<VideoFile | null>(null);
+  const [lightboxKf, setLightboxKf] = useState<{ img: string; ts: string } | null>(null);
+  const [formatFilter, setFormatFilter] = useState("all");
+
+  const mountPaths: Record<string, string> = { d1: "/Volumes/WD_BLACK", d2: "/Volumes/Seagate", d3: "/Volumes/Samsung_T7", d4: "/Volumes/LaCie", d5: "/Volumes/G_DRIVE" };
+  const mountPath = mountPaths[drive.id] ?? "/Volumes/Unknown";
+
+  const filteredVideos = useMemo(() =>
+    DRIVE_VIDEOS.filter(v =>
+      v.filename.toLowerCase().includes(videoSearch.toLowerCase()) &&
+      (formatFilter === "all" || v.format.toLowerCase().includes(formatFilter.toLowerCase()))
+    ), [videoSearch, formatFilter]);
+
+  const indexBannerStyle: Record<IndexingState, { bg: string; border: string; color: string; icon: React.ReactNode; label: string }> = {
+    "in-progress": { bg: "rgba(10,132,255,0.1)",  border: "#0A84FF",  color: "#0A84FF",  icon: <RefreshCw size={14} />, label: "Indexing In Progress" },
+    "paused":      { bg: "rgba(255,159,10,0.1)",  border: "#FF9F0A",  color: "#FF9F0A",  icon: <Pause size={14} />,     label: "Indexing Paused" },
+    "completed":   { bg: "rgba(50,215,75,0.1)",   border: "#32D74B",  color: "#32D74B",  icon: <Check size={14} />,     label: "Indexing Completed" },
+    "not-indexed": { bg: "rgba(235,235,245,0.04)", border: "#38383A", color: "rgba(235,235,245,0.5)", icon: <HardDrive size={14} />, label: "Not Indexed" },
+    "failed":      { bg: "rgba(255,69,58,0.1)",   border: "#FF453A",  color: "#FF453A",  icon: <AlertCircle size={14} />, label: "Indexing Failed" },
+  };
+  const banner = indexBannerStyle[indexingState];
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-3 shrink-0 flex items-center gap-4" style={{ borderBottom: "1px solid #38383A" }}>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-[12px] font-medium transition-opacity hover:opacity-70 shrink-0"
+          style={{ color: "rgba(235,235,245,0.5)" }}
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+        <div className="w-px h-5" style={{ background: "#38383A" }} />
+        <div
+          className="size-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "rgba(235,235,245,0.06)" }}
+        >
+          <HardDrive size={18} style={{ color: drive.status === "connected" ? "#0A84FF" : "rgba(235,235,245,0.3)" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[16px] font-bold text-white leading-tight truncate">{drive.name}</p>
+          <p className="text-[12px] font-mono truncate" style={{ color: "rgba(235,235,245,0.45)" }}>{mountPath}</p>
+        </div>
+        <StatusBadge status={drive.status} />
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {["Re-index", "Export", "Finder", "Eject"].map((label, i) => {
+            const icons = [<RefreshCw size={12}/>, <Download size={12}/>, <Folder size={12}/>, <Trash2 size={12}/>];
+            const danger = i === 3;
+            return (
+              <button
+                key={label}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-opacity hover:opacity-80"
+                style={{
+                  background: danger ? "rgba(255,69,58,0.1)" : "rgba(235,235,245,0.06)",
+                  color: danger ? "#FF453A" : "rgba(235,235,245,0.6)",
+                  border: `1px solid ${danger ? "rgba(255,69,58,0.3)" : "#38383A"}`,
+                }}
+              >
+                {icons[i]} {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-5 space-y-6" style={{ maxWidth: 1100 }}>
+
+          {/* ── 1. Summary Cards ── */}
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+            {[
+              { icon: <HardDrive size={16} style={{ color: "#0A84FF" }} />, value: drive.sizeGB >= 1000 ? `${drive.sizeGB / 1000} TB` : `${drive.sizeGB} GB`, label: "Total Size" },
+              { icon: <Film size={16} style={{ color: "#BF5AF2" }} />,      value: drive.videoCount.toLocaleString(), label: "Total Videos",    sub: "files" },
+              { icon: <Image size={16} style={{ color: "#32D74B" }} />,     value: "15,830",  label: "Keyframes", sub: "frames extracted" },
+              { icon: <Calendar size={16} style={{ color: "#FF9F0A" }} />,  value: drive.lastIndexed, label: "Last Indexed" },
+            ].map(c => (
+              <div key={c.label} className="rounded-xl p-4" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <div className="flex items-center gap-2 mb-2">{c.icon}<span className="text-[11px]" style={{ color: "rgba(235,235,245,0.45)" }}>{c.label}</span></div>
+                <p className="text-[20px] font-bold text-white leading-tight">{c.value}</p>
+                {c.sub && <p className="text-[11px] mt-0.5" style={{ color: "rgba(235,235,245,0.35)" }}>{c.sub}</p>}
+              </div>
+            ))}
+          </div>
+
+          {/* ── 2. Indexing Status ── */}
+          <CollapsibleSection title="Indexing Status">
+            <div className="rounded-xl p-4 mb-4" style={{ background: banner.bg, border: `1px solid ${banner.border}` }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 font-semibold text-[13px]" style={{ color: banner.color }}>
+                  {banner.icon} {banner.label}
+                </div>
+                <div className="flex items-center gap-2">
+                  {indexingState === "in-progress" && <>
+                    <button onClick={() => setIndexingState("paused")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "rgba(235,235,245,0.08)", color: "rgba(235,235,245,0.7)", border: "1px solid #38383A" }}><Pause size={11}/> Pause</button>
+                    <button onClick={() => setIndexingState("not-indexed")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "rgba(255,69,58,0.1)", color: "#FF453A", border: "1px solid rgba(255,69,58,0.3)" }}><Square size={11}/> Stop</button>
+                  </>}
+                  {indexingState === "paused" && <>
+                    <button onClick={() => setIndexingState("in-progress")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "rgba(10,132,255,0.15)", color: "#0A84FF", border: "1px solid #0A84FF" }}><Play size={11}/> Resume</button>
+                    <button onClick={() => setIndexingState("not-indexed")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "rgba(255,69,58,0.1)", color: "#FF453A", border: "1px solid rgba(255,69,58,0.3)" }}><Square size={11}/> Stop</button>
+                  </>}
+                  {indexingState === "not-indexed" && <button onClick={() => setIndexingState("in-progress")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "#0A84FF", color: "#fff" }}><Zap size={11}/> Index Now</button>}
+                  {indexingState === "failed" && <button onClick={() => setIndexingState("in-progress")} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium" style={{ background: "#FF453A", color: "#fff" }}><RefreshCw size={11}/> Retry</button>}
+                </div>
+              </div>
+
+              {(indexingState === "in-progress" || indexingState === "paused") && (
+                <>
+                  <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: "rgba(235,235,245,0.08)" }}>
+                    <div className="h-full rounded-full" style={{ width: "45%", background: banner.color }} />
+                  </div>
+                  <p className="text-[11px]" style={{ color: banner.color }}>
+                    Video 12/1,247 · Frame 45/120 (38%) · ETA: 2h 15m
+                  </p>
+                </>
+              )}
+              {indexingState === "completed" && (
+                <p className="text-[12px]" style={{ color: "#32D74B" }}>Indexing completed on {drive.lastIndexed}</p>
+              )}
+              {indexingState === "failed" && (
+                <p className="text-[12px]" style={{ color: "#FF453A" }}>Error: 2 videos failed to process. Disk read error on sectors 0x4F2–0x4F8.</p>
+              )}
+            </div>
+
+            {/* Stats table */}
+            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #38383A" }}>
+              {[
+                ["Videos Indexed",               "1,200 / 1,247"],
+                ["Videos Remaining",             "47"],
+                ["Keyframes Extracted",          "15,830"],
+                ["Average Keyframes / Video",    "12.7"],
+                ["Indexing Duration",            "3h 42m"],
+                ["Storage Used (Thumbnails)",    "245 MB"],
+                ["Failed Videos",               "2"],
+              ].map(([k, v], i) => (
+                <div key={k} className="flex items-center justify-between px-4 py-2.5" style={{ background: i % 2 === 0 ? "#2C2C2E" : "rgba(58,58,60,0.4)", borderBottom: i < 6 ? "1px solid #38383A" : "none" }}>
+                  <span className="text-[12px]" style={{ color: "rgba(235,235,245,0.5)" }}>{k}</span>
+                  <span className="text-[13px] font-medium text-white">{v}</span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+
+          {/* ── 3. Video Library ── */}
+          <CollapsibleSection title="Video Library">
+            {/* Filter bar */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(235,235,245,0.35)" }} />
+                <input
+                  value={videoSearch}
+                  onChange={e => setVideoSearch(e.target.value)}
+                  placeholder="Search videos…"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg text-[12px] text-white outline-none"
+                  style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
+                />
+              </div>
+              <select
+                value={formatFilter}
+                onChange={e => setFormatFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg text-[12px] text-white outline-none"
+                style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
+              >
+                <option value="all">All Formats</option>
+                <option value="mp4">MP4</option>
+                <option value="mov">MOV</option>
+              </select>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #38383A" }}>
+                <button onClick={() => setViewMode("grid")} className="p-2 transition-colors" style={{ background: viewMode === "grid" ? "#0A84FF" : "#2C2C2E" }}>
+                  <Grid size={13} style={{ color: viewMode === "grid" ? "#fff" : "rgba(235,235,245,0.5)" }} />
+                </button>
+                <button onClick={() => setViewMode("list")} className="p-2 transition-colors" style={{ background: viewMode === "list" ? "#0A84FF" : "#2C2C2E" }}>
+                  <List size={13} style={{ color: viewMode === "list" ? "#fff" : "rgba(235,235,245,0.5)" }} />
+                </button>
+              </div>
+            </div>
+
+            {viewMode === "grid" ? (
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+                {filteredVideos.map(v => (
+                  <div key={v.id} className="rounded-xl overflow-hidden" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                    <div className="overflow-hidden" style={{ height: 110, background: "#3A3A3C" }}>
+                      <img src={v.thumbnail} alt={v.filename} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-[12px] font-medium text-white truncate mb-1">{v.filename}</p>
+                      <div className="space-y-0.5 mb-2">
+                        {[["Duration", v.duration], ["Keyframes", String(v.keyframes)], ["Size", `${(v.sizeMB / 1024).toFixed(1)} GB`], ["Format", v.format]].map(([k, val]) => (
+                          <div key={k} className="flex justify-between">
+                            <span className="text-[10px]" style={{ color: "rgba(235,235,245,0.4)" }}>{k}</span>
+                            <span className="text-[10px] font-medium" style={{ color: "rgba(235,235,245,0.7)" }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {[v.lighting, v.timeOfDay, v.shooting].map(t => (
+                          <span key={t} className="text-[9px] rounded px-1.5 py-0.5" style={{ background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.5)" }}>{t}</span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setSelectedVideo(v)}
+                        className="flex items-center gap-1 text-[11px] font-medium transition-opacity hover:opacity-70"
+                        style={{ color: "#0A84FF" }}
+                      >
+                        View Keyframes <ChevronRight size={11} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #38383A" }}>
+                <div className="grid text-[11px] font-medium px-4 py-2" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr", background: "#3A3A3C", color: "rgba(235,235,245,0.5)" }}>
+                  {["Filename", "Duration", "Keyframes", "Size", "Format", "Actions"].map(h => <span key={h}>{h}</span>)}
+                </div>
+                {filteredVideos.map((v, i) => (
+                  <div key={v.id} className="grid items-center px-4 py-2.5" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr", background: i % 2 === 0 ? "#2C2C2E" : "rgba(58,58,60,0.4)", borderTop: "1px solid #38383A" }}>
+                    <span className="text-[12px] text-white truncate pr-4">{v.filename}</span>
+                    <span className="text-[12px] font-mono" style={{ color: "rgba(235,235,245,0.6)" }}>{v.duration}</span>
+                    <span className="text-[12px]" style={{ color: "rgba(235,235,245,0.6)" }}>{v.keyframes}</span>
+                    <span className="text-[12px]" style={{ color: "rgba(235,235,245,0.6)" }}>{(v.sizeMB / 1024).toFixed(1)} GB</span>
+                    <span className="text-[11px]" style={{ color: "rgba(235,235,245,0.5)" }}>{v.format}</span>
+                    <button onClick={() => setSelectedVideo(v)} className="text-[11px] font-medium text-left" style={{ color: "#0A84FF" }}>Keyframes</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* ── 4. Keyframe Gallery (shown when video selected) ── */}
+          {selectedVideo && (
+            <CollapsibleSection title={`Keyframes — ${selectedVideo.filename}`}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[12px]" style={{ color: "rgba(235,235,245,0.45)" }}>{KEYFRAME_TIMESTAMPS.length} frames extracted</p>
+                <button onClick={() => setSelectedVideo(null)} className="text-[11px]" style={{ color: "rgba(235,235,245,0.4)" }}>Close ✕</button>
+              </div>
+              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}>
+                {KEYFRAME_TIMESTAMPS.map((ts, i) => (
+                  <button
+                    key={ts}
+                    onClick={() => setLightboxKf({ img: KF_IMAGES[i % KF_IMAGES.length], ts })}
+                    className="group rounded-lg overflow-hidden text-left"
+                    style={{ background: "#2C2C2E", border: "1px solid #38383A" }}
+                  >
+                    <div className="overflow-hidden" style={{ height: 79, background: "#3A3A3C" }}>
+                      <img src={KF_IMAGES[i % KF_IMAGES.length]} alt={ts} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                    </div>
+                    <p className="text-[10px] font-mono px-2 py-1.5" style={{ color: "rgba(235,235,245,0.5)" }}>{ts}</p>
+                  </button>
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* ── 5. AI Analysis ── */}
+          <CollapsibleSection title="AI Analysis Summary">
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+              <div className="rounded-xl p-4" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <p className="text-[12px] font-semibold text-white mb-3">Lighting</p>
+                <div className="space-y-2.5">
+                  {AI_LIGHTING.map(r => <AIBar key={r.label} label={r.label} pct={r.pct} frames={r.frames} />)}
+                </div>
+              </div>
+              <div className="rounded-xl p-4" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <p className="text-[12px] font-semibold text-white mb-3">Time of Day</p>
+                <div className="space-y-2.5">
+                  {AI_TIME.map(r => <AIBar key={r.label} label={r.label} pct={r.pct} />)}
+                </div>
+              </div>
+              <div className="rounded-xl p-4" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <p className="text-[12px] font-semibold text-white mb-3">Shooting Type</p>
+                <div className="space-y-2.5">
+                  {AI_SHOOTING.map(r => <AIBar key={r.label} label={r.label} pct={r.pct} />)}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl p-4" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+              <p className="text-[12px] font-semibold text-white mb-3">Scene Categories</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENE_TAGS.map(t => (
+                  <span key={t.label} className="text-[11px] font-medium rounded-full px-3 py-1" style={{ background: "rgba(10,132,255,0.12)", border: "1px solid rgba(10,132,255,0.25)", color: "#0A84FF" }}>
+                    {t.label} <span style={{ color: "rgba(10,132,255,0.6)" }}>({t.n.toLocaleString()})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* ── 6. People / Cast ── */}
+          <CollapsibleSection title="People & Cast">
+            <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}>
+              {DRIVE_PEOPLE.map((p, i) => (
+                <div key={i} className="rounded-xl p-4 flex flex-col items-center gap-2" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                  <img src={p.faceUrl} alt={p.name ?? "Unknown"} className="size-14 rounded-full object-cover" style={{ border: p.name ? "2px solid #32D74B" : "2px solid #38383A" }} />
+                  <p className="text-[12px] font-medium text-white">{p.name ?? `Unknown ${i + 1}`}</p>
+                  <div className="text-center space-y-0.5">
+                    <p className="text-[11px]" style={{ color: "rgba(235,235,245,0.45)" }}>{p.frames} frames · {p.videos} videos</p>
+                    <p className="text-[10px] font-semibold" style={{ color: confidenceColor(p.confidence) }}>{p.confidence}% confidence</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+
+          {/* ── 7. Storage & Health ── */}
+          <CollapsibleSection title="Storage & Health">
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              {/* Storage */}
+              <div className="rounded-xl p-4 space-y-3" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <p className="text-[12px] font-semibold text-white">Storage Breakdown</p>
+                {[
+                  ["Video Files",  "1.8 TB", 90],
+                  ["Thumbnails",   "245 MB", 0.01],
+                  ["Database",     "12 MB",  0.001],
+                ].map(([k, v, pct]) => (
+                  <div key={String(k)}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[11px]" style={{ color: "rgba(235,235,245,0.5)" }}>{k}</span>
+                      <span className="text-[11px] font-medium text-white">{v}</span>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "#3A3A3C" }}>
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, Number(pct))}%`, background: "#0A84FF" }} />
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-2" style={{ borderTop: "1px solid #38383A" }}>
+                  <span className="text-[11px]" style={{ color: "rgba(235,235,245,0.5)" }}>Total Used</span>
+                  <span className="text-[12px] font-semibold text-white">
+                    {drive.sizeGB >= 1000 ? `${(drive.sizeGB * 0.9 / 1000).toFixed(1)} TB` : `${Math.round(drive.sizeGB * 0.9)} GB`} / {drive.sizeGB >= 1000 ? `${drive.sizeGB / 1000} TB` : `${drive.sizeGB} GB`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Health */}
+              <div className="rounded-xl p-4 space-y-2.5" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+                <p className="text-[12px] font-semibold text-white mb-3">Drive Health</p>
+                {[
+                  ["Status",       drive.status === "connected" ? "Connected" : "Disconnected"],
+                  ["Mount Point",  mountPath],
+                  ["File System",  "exFAT"],
+                  ["Connection",   "USB 3.2"],
+                  ["Writable",     "Yes"],
+                  ["SMART Status", "Healthy"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-[11px]" style={{ color: "rgba(235,235,245,0.45)" }}>{k}</span>
+                    <span className="text-[11px] font-medium text-white">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div className="mt-4 rounded-xl p-4 flex items-center gap-6" style={{ background: "#2C2C2E", border: "1px solid #38383A" }}>
+              <QRMiniWidget driveId={drive.id} />
+              <div>
+                <p className="text-[13px] font-semibold text-white mb-1">Mobile Access QR</p>
+                <p className="text-[11px] mb-3" style={{ color: "rgba(235,235,245,0.45)" }}>Scan with FrameFinder mobile to locate this drive</p>
+                <div className="flex gap-2">
+                  <button className="px-3 py-1.5 rounded-lg text-[11px] font-medium" style={{ background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.6)", border: "1px solid #38383A" }}>Regenerate</button>
+                  <button className="px-3 py-1.5 rounded-lg text-[11px] font-medium" style={{ background: "rgba(235,235,245,0.06)", color: "rgba(235,235,245,0.6)", border: "1px solid #38383A" }}>Print QR</button>
+                </div>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+        </div>
+      </div>
+
+      {/* Keyframe lightbox */}
+      {lightboxKf && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.85)" }}
+          onClick={() => setLightboxKf(null)}
+        >
+          <div className="flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
+            <img src={lightboxKf.img} alt={lightboxKf.ts} className="rounded-xl object-cover" style={{ maxWidth: 720, maxHeight: 480, width: "100%" }} />
+            <div className="flex items-center gap-6">
+              <span className="text-[13px] font-mono text-white">{lightboxKf.ts}</span>
+              <div className="flex gap-2">
+                {["Natural", "Daytime", "Handheld"].map(t => (
+                  <span key={t} className="text-[11px] rounded px-2 py-0.5" style={{ background: "rgba(235,235,245,0.08)", color: "rgba(235,235,245,0.6)" }}>{t}</span>
+                ))}
+              </div>
+              <button onClick={() => setLightboxKf(null)} style={{ color: "rgba(235,235,245,0.4)" }}><X size={16} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QRMiniWidget({ driveId }: { driveId: string }) {
+  const cells = useMemo(() => Array.from({ length: 49 }).map(() => Math.random() > 0.5), [driveId]);
+  return (
+    <div className="size-20 rounded-lg grid grid-cols-7 gap-px p-1.5 shrink-0" style={{ background: "#fff" }}>
+      {cells.map((on, i) => (
+        <div key={i} style={{ background: on ? "#000" : "#fff", borderRadius: 1 }} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Login Screen ────────────────────────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -1634,6 +2153,7 @@ export default function App() {
   const [authed, setAuthed] = useState(false);
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [searchPrefill, setSearchPrefill] = useState("");
+  const [selectedDrive, setSelectedDrive] = useState<Drive | null>(null);
 
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
@@ -1642,8 +2162,17 @@ export default function App() {
     setScreen("search");
   }
 
+  function handleSelectDrive(drive: Drive) {
+    setSelectedDrive(drive);
+    setScreen("dashboard");
+  }
+
+  function handleBackToDashboard() {
+    setSelectedDrive(null);
+  }
+
   const screenTitles: Record<Screen, string> = {
-    dashboard: "FrameFinder — Drive Manager",
+    dashboard: selectedDrive ? `${selectedDrive.name} — FrameFinder` : "FrameFinder — Drive Manager",
     search: "FrameFinder — Smart Search",
     scenes: "FrameFinder — Scenes",
     people: "FrameFinder — People",
@@ -1652,7 +2181,9 @@ export default function App() {
   };
 
   const screens: Record<Screen, JSX.Element> = {
-    dashboard: <DashboardScreen />,
+    dashboard: selectedDrive
+      ? <DriveDetailsScreen drive={selectedDrive} onBack={handleBackToDashboard} />
+      : <DashboardScreen onSelectDrive={handleSelectDrive} />,
     search: <SearchScreen prefill={searchPrefill} onClear={() => setSearchPrefill("")} />,
     scenes: <ScenesScreen onNavigateSearch={navigateToSearch} />,
     people: <PeopleScreen />,
@@ -1670,7 +2201,7 @@ export default function App() {
 
       {/* Main layout: sidebar + content */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar active={screen} onNav={setScreen} />
+        <Sidebar active={screen} onNav={s => { if (s !== "dashboard") setSelectedDrive(null); setScreen(s); }} />
 
         {/* Content area */}
         <div className="flex-1 overflow-hidden" style={{ background: "#1C1C1E" }}>
